@@ -2,6 +2,14 @@
 
 A simplified clone of Perplexity.ai built as part of the Hanover Takehome Interview Question. This application allows users to submit queries and receive AI-generated responses based on search results, complete with citations.
 
+## Screenshots
+
+![Main Interface](./docs/images/main-interface.png)
+_Main interface where users can submit their queries_
+
+![Search Results](./docs/images/search-results.png)
+_Example of search results with AI-generated response_
+
 ## Project Overview
 
 This project implements a basic version of Perplexity.ai's functionality, where users can:
@@ -71,6 +79,8 @@ This project implements a basic version of Perplexity.ai's functionality, where 
 perplexity-clone/
 ├── client/        # Frontend application
 ├── server/        # Backend server
+├── docs/          # Documentation assets
+│   └── images/    # Screenshot images
 ├── README.md      # This file
 └── .gitignore     # Git ignore file
 ```
