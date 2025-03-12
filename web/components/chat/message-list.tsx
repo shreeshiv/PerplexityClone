@@ -1,11 +1,11 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Message } from "@/types/chat";
+import { Message, Citation } from "@/types/chat";
 import { MessageActions } from "./message-actions";
 import { toast } from "sonner";
 
 interface MessageListProps {
   messages: Message[];
-  onRegenerate?: (messageId: number) => void;
+  onRegenerate: (messageId: number) => void;
 }
 
 export function MessageList({ messages, onRegenerate }: MessageListProps) {
@@ -44,47 +44,60 @@ export function MessageList({ messages, onRegenerate }: MessageListProps) {
   };
 
   return (
-    <ScrollArea className="flex-1 p-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="flex-1 overflow-y-auto p-4">
+      <div className="max-w-2xl mx-auto space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`mb-6 ${
-              message.sender === "bot" 
-                ? "bg-zinc-900 p-4 rounded-lg" 
-                : ""
+            className={`flex flex-col ${
+              message.sender === "user" ? "items-end" : "items-start"
             }`}
           >
-            {message.image && (
-              <img 
-                src={message.image} 
-                alt="Uploaded content"
-                className="max-w-full h-auto rounded-lg mb-2"
-              />
-            )}
-            <div className="text-zinc-200">
-              {message.text}
+            <div
+              className={`rounded-lg px-4 py-2 max-w-[85%] ${
+                message.sender === "user"
+                  ? "bg-blue-600 text-white"
+                  : "bg-zinc-800 text-zinc-100"
+              }`}
+            >
+              <p>{message.text}</p>
+              {message.image && (
+                <img
+                  src={message.image}
+                  alt="User uploaded"
+                  className="mt-2 max-w-sm rounded"
+                />
+              )}
+              {message.citations && message.citations.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  <p className="text-sm text-zinc-400">Sources:</p>
+                  {message.citations.map((citation, index) => (
+                    <div key={index} className="text-sm border border-zinc-700 rounded p-2">
+                      <a
+                        href={citation.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:underline"
+                      >
+                        {citation.title}
+                      </a>
+                      <p className="text-zinc-400 mt-1">{citation.text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            {message.reasoning && (
-              <div className="mt-2 text-sm text-zinc-400">
-                {message.reasoning}
-              </div>
+            {message.sender === "bot" && (
+              <button
+                onClick={() => onRegenerate(message.id)}
+                className="text-xs text-zinc-500 mt-1 hover:text-zinc-300"
+              >
+                Regenerate response
+              </button>
             )}
-            <MessageActions
-              onCopy={() => handleCopy(message.text)}
-              onShare={() => handleShare(message)}
-              onLike={() => handleLike(message.id)}
-              onDislike={() => handleDislike(message.id)}
-              onRegenerate={
-                message.sender === "bot" && onRegenerate 
-                  ? () => onRegenerate(message.id)
-                  : undefined
-              }
-              isBot={message.sender === "bot"}
-            />
           </div>
         ))}
       </div>
-    </ScrollArea>
+    </div>
   );
 } 

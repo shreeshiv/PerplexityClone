@@ -4,16 +4,19 @@ import { useState } from "react";
 import { WelcomeView } from "@/components/chat/welcome-view";
 import { ChatInput } from "@/components/chat/chat-input";
 import { MessageList } from "@/components/chat/message-list";
-import { Message } from "@/types/chat";
+import { Message, MessageSender } from "@/types/chat";
 import { toast } from "sonner";
 import { useContext } from "react";
 import { useSearchMode } from "@/contexts/search-mode-context";
 
 interface ChatMessage {
+  id: number;
   text: string;
-  sender: string;
+  sender: MessageSender;
+  image?: string;
   citations?: Citation[];
   search_id?: string;
+  reasoning?: string;
 }
 
 interface Citation {
@@ -64,9 +67,10 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const messageHistory = messages.concat(userMessage).map(({ text, sender }) => ({
+      const messageHistory = messages.concat(userMessage).map(({ text, sender, citations }) => ({
         text,
         sender,
+        citations,
       }));
 
       formData.append("messages", JSON.stringify(messageHistory));
