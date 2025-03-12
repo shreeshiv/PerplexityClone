@@ -6,12 +6,42 @@ import { ChatInput } from "@/components/chat/chat-input";
 import { MessageList } from "@/components/chat/message-list";
 import { Message } from "@/types/chat";
 import { toast } from "sonner";
+import { useContext } from "react";
+import { useSearchMode } from "@/contexts/search-mode-context";
+
+interface ChatMessage {
+  text: string;
+  sender: string;
+  citations?: Citation[];
+  search_id?: string;
+}
+
+interface Citation {
+  url: string;
+  title: string;
+  text: string;
+}
+
+// First, let's create a new type for the API endpoints
+const API_ENDPOINTS = {
+  normal: "http://localhost:8000/api/chat",
+  open: "http://localhost:8000/api/chat/open-search"
+} as const;
 
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const { activeSearchModes } = useSearchMode();
+
+  // Helper function to determine which API endpoint to use
+  const getApiEndpoint = (activeSearchModes: Set<string>): string => {
+    if (activeSearchModes.has("open")) {
+      return API_ENDPOINTS.open;
+    }
+    return API_ENDPOINTS.normal;
+  };
 
   const handleSend = async () => {
     if ((!inputText.trim() && !selectedImage) || isLoading) return;
@@ -40,8 +70,10 @@ export default function Home() {
       }));
 
       formData.append("messages", JSON.stringify(messageHistory));
+      
+      const apiEndpoint = getApiEndpoint(activeSearchModes);
 
-      const response = await fetch("http://localhost:8000/api/chat", {
+      const response = await fetch(apiEndpoint, {
         method: "POST",
         body: formData,
       });
@@ -56,7 +88,9 @@ export default function Home() {
         id: messages.length + 2,
         text: data.message.text,
         sender: "bot" as const,
-        reasoning: data.message.reasoning
+        reasoning: data.message.reasoning,
+        citations: data.message.citations,
+        search_id: data.message.search_id
       };
       
       setMessages(prev => [...prev, botMessage]);
@@ -93,7 +127,9 @@ export default function Home() {
       const formData = new FormData();
       formData.append("messages", JSON.stringify(conversationHistory));
 
-      const response = await fetch("http://localhost:8000/api/chat", {
+      const apiEndpoint = getApiEndpoint(activeSearchModes);
+
+      const response = await fetch(apiEndpoint, {
         method: "POST",
         body: formData,
       });
@@ -108,7 +144,9 @@ export default function Home() {
         id: messages.length + 1,
         text: data.message.text,
         sender: "bot" as const,
-        reasoning: data.message.reasoning
+        reasoning: data.message.reasoning,
+        citations: data.message.citations,
+        search_id: data.message.search_id
       };
       
       // Replace the old message and remove subsequent messages

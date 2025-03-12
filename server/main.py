@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional, Dict, Any
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
@@ -9,6 +9,7 @@ import base64
 from io import BytesIO
 from PIL import Image
 import json
+import requests
 
 # Load environment variables
 load_dotenv()
@@ -125,6 +126,69 @@ async def chat(
 
     except Exception as e:
         print(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat/open-search")
+async def chat_with_search(
+    messages: str = Form(...),
+    image: UploadFile | None = None
+):
+    try:
+        # Parse the messages JSON string
+        messages_data = json.loads(messages)
+        latest_user_message = messages_data[-1]["text"]
+        
+        # Simple web search request with proper tool configuration
+        response = client.chat.completions.create(
+            model="gpt-4-turbo-preview",
+            messages=[{
+                "role": "user",
+                "content": latest_user_message
+            }],
+            tools=[{
+                "type": "retrieval"  # Changed back to retrieval
+            }],
+            tool_choice="auto"  # Let the model decide when to use the tool
+        )
+
+        # Extract the response and citations
+        message = response.choices[0].message
+        
+        # Initialize variables
+        main_answer = ""
+        citations = []
+        
+        # Check if there's tool calls in the response
+        if hasattr(message, 'tool_calls') and message.tool_calls:
+            # Process tool calls if any
+            tool_call = message.tool_calls[0]
+            if tool_call.type == "retrieval":
+                main_answer = message.content or ""
+                
+                # Extract citations if available
+                if hasattr(tool_call, 'retrieval'):
+                    for citation in tool_call.retrieval.citations:
+                        citations.append({
+                            "url": citation.url,
+                            "title": citation.title or "Source",
+                            "text": citation.text
+                        })
+        else:
+            # If no tool calls, use the direct content
+            main_answer = message.content or ""
+
+        return {
+            "message": {
+                "text": main_answer,
+                "sender": "bot",
+                "citations": citations,
+                "search_id": response.id
+            }
+        }
+
+    except Exception as e:
+        print(f"Error in open search: {str(e)}")
+        print(f"Full error details: {str(e.__dict__)}")  # Add more detailed error logging
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/health")

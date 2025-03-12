@@ -19,52 +19,43 @@ export function ChatInput({
   setSelectedImage,
   selectedImage,
 }: ChatInputProps) {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedImage(e.target.files[0]);
+    }
+  };
+
   return (
-    <>
-      <div className="flex gap-2 bg-zinc-900 p-2 rounded-lg">
-        <Input
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Ask anything..."
-          className="flex-1 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-white placeholder:text-zinc-400"
-        />
-        <div className="flex gap-2">
-          <label 
-            htmlFor="imageUpload" 
-            className="cursor-pointer p-2 hover:bg-zinc-800 rounded-md"
-          >
-            <ImagePlus className="h-5 w-5 text-zinc-400" />
-            <input
-              id="imageUpload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
-            />
-          </label>
-          <Button 
-            onClick={handleSend}
-            disabled={isLoading}
-            className="bg-zinc-800 hover:bg-zinc-700 text-white"
-          >
-            {isLoading ? "..." : "Send"}
-          </Button>
-        </div>
-      </div>
-      {selectedImage && (
-        <div className="mt-2 text-sm text-zinc-400">
-          Selected image: {selectedImage.name}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSelectedImage(null)}
-            className="ml-2 text-zinc-400 hover:text-white"
-          >
-            Remove
-          </Button>
-        </div>
-      )}
-    </>
+    <div className="flex items-center space-x-2">
+      <Input
+        value={inputText}
+        onChange={(e) => setInputText(e.target.value)}
+        placeholder="Ask anything..."
+        className="flex-1"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+          }
+        }}
+      />
+      <input
+        type="file"
+        id="image-upload"
+        className="hidden"
+        accept="image/*"
+        onChange={handleImageSelect}
+      />
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => document.getElementById("image-upload")?.click()}
+      >
+        <ImagePlus className="h-5 w-5" />
+      </Button>
+      <Button onClick={handleSend} disabled={isLoading}>
+        Send
+      </Button>
+    </div>
   );
 } 

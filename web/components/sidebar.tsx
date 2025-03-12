@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, Boxes, Library, Plus, Command } from "lucide-react";
+import { Home, Compass, Boxes, Library, Plus, Command, Bot, Search, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSearchMode } from "@/contexts/search-mode-context";
 
 const routes = [
   {
@@ -28,8 +29,33 @@ const routes = [
   },
 ];
 
+interface SearchMode {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+}
+
+const searchModes: SearchMode[] = [
+  {
+    id: "normal",
+    label: "Normal Chatbot",
+    icon: Bot,
+  },
+  {
+    id: "open",
+    label: "Include Open Search",
+    icon: Search,
+  },
+  {
+    id: "deep",
+    label: "Deep Search / RL",
+    icon: Brain,
+  },
+];
+
 export function Sidebar() {
   const pathname = usePathname();
+  const { activeSearchModes, toggleSearchMode } = useSearchMode();
 
   return (
     <div className="space-y-4 py-4 flex flex-col h-full bg-zinc-900 text-white">
@@ -52,6 +78,7 @@ export function Sidebar() {
               </kbd>
             </button>
           </div>
+
           <nav className="flex flex-col space-y-1">
             {routes.map((route) => (
               <Link
@@ -67,6 +94,41 @@ export function Sidebar() {
               </Link>
             ))}
           </nav>
+        </div>
+      </div>
+
+      {/* Search Mode Toggles - Now at bottom */}
+      <div className="px-3 py-2 border-t border-zinc-800">
+        <h2 className="px-4 text-xs font-semibold text-zinc-400 mb-2">SEARCH MODE</h2>
+        <div className="space-y-1">
+          {searchModes.map((mode) => (
+            <button
+              key={mode.id}
+              onClick={() => toggleSearchMode(mode.id)}
+              className={cn(
+                "flex items-center w-full p-3 text-sm font-medium rounded-lg transition",
+                "hover:bg-zinc-800/50",
+                activeSearchModes.has(mode.id) 
+                  ? "bg-zinc-800/50 text-white" 
+                  : "text-zinc-400"
+              )}
+            >
+              <mode.icon className={cn(
+                "h-4 w-4 mr-2",
+                activeSearchModes.has(mode.id) ? "text-blue-400" : ""
+              )} />
+              {mode.label}
+              <div className={cn(
+                "ml-auto w-9 h-5 rounded-full transition-colors",
+                activeSearchModes.has(mode.id) ? "bg-blue-600" : "bg-zinc-700"
+              )}>
+                <div className={cn(
+                  "h-4 w-4 rounded-full bg-white transform transition-transform mt-0.5",
+                  activeSearchModes.has(mode.id) ? "translate-x-4 ml-0.5" : "translate-x-0.5"
+                )} />
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     </div>
