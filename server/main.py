@@ -10,6 +10,7 @@ from io import BytesIO
 from PIL import Image
 import json
 import requests
+import re
 
 # Load environment variables
 load_dotenv()
@@ -138,44 +139,68 @@ async def chat_with_search(
         messages_data = json.loads(messages)
         latest_user_message = messages_data[-1]["text"]
         
-        # Simple web search request with proper tool configuration
+        # Use browsing tool configuration
         response = client.chat.completions.create(
             model="gpt-4-turbo-preview",
             messages=[{
+                "role": "system",
+                "content": "You are a helpful assistant that can browse the internet. Always cite your sources with URLs."
+            }, {
                 "role": "user",
                 "content": latest_user_message
             }],
             tools=[{
-                "type": "retrieval"  # Changed back to retrieval
+                "type": "function",
+                "function": {
+                    "name": "browser",
+                    "description": "Browse the internet for real-time information",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The search query"
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                }
             }],
-            tool_choice="auto"  # Let the model decide when to use the tool
+            tool_choice="auto"
         )
 
-        # Extract the response and citations
+        # Log the full response for debugging
+        print(f"Full response structure:", response)
+
+        # Extract the main content and any tool calls
         message = response.choices[0].message
-        
-        # Initialize variables
-        main_answer = ""
+        main_answer = message.content or ""
         citations = []
-        
-        # Check if there's tool calls in the response
+
+        # Process any tool calls for citations
         if hasattr(message, 'tool_calls') and message.tool_calls:
-            # Process tool calls if any
-            tool_call = message.tool_calls[0]
-            if tool_call.type == "retrieval":
-                main_answer = message.content or ""
-                
-                # Extract citations if available
-                if hasattr(tool_call, 'retrieval'):
-                    for citation in tool_call.retrieval.citations:
-                        citations.append({
-                            "url": citation.url,
-                            "title": citation.title or "Source",
-                            "text": citation.text
-                        })
-        else:
-            # If no tool calls, use the direct content
-            main_answer = message.content or ""
+            for tool_call in message.tool_calls:
+                try:
+                    args = json.loads(tool_call.function.arguments)
+                    if 'urls' in args:
+                        for url in args['urls']:
+                            citations.append({
+                                "url": url,
+                                "title": "Source",
+                                "text": "Referenced content"
+                            })
+                except:
+                    pass
+
+        # Try to extract URLs from the main content
+        urls = re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', main_answer)
+        for url in urls:
+            if not any(c['url'] == url for c in citations):
+                citations.append({
+                    "url": url,
+                    "title": "Referenced Source",
+                    "text": "Content from this source"
+                })
 
         return {
             "message": {
@@ -183,12 +208,16 @@ async def chat_with_search(
                 "sender": "bot",
                 "citations": citations,
                 "search_id": response.id
+            },
+            "web_search": {
+                "status": "completed",
+                "id": response.id
             }
         }
 
     except Exception as e:
         print(f"Error in open search: {str(e)}")
-        print(f"Full error details: {str(e.__dict__)}")  # Add more detailed error logging
+        print(f"Full error details: {str(e.__dict__)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/health")
