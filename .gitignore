@@ -67,3 +67,4 @@ ENV/
 .DS_Store
 *.pem
 Thumbs.db
+server/.env
